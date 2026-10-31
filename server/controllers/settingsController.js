@@ -1,7 +1,7 @@
 import { appwriteConfigured, missingAppwriteConfig } from '../config/appwrite.js';
 import * as Settings from '../models/settingsModel.js';
 
-export async function getSettings(_req, res, next) {
+export async function getSettings(req, res, next) {
   if (!appwriteConfigured) return res.status(503).json({ message: `Appwrite is not configured. Add ${missingAppwriteConfig.join(', ')} to your environment.` });
   try {
     res.json(await Settings.getSettings());

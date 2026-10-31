@@ -25,3 +25,11 @@ if (appwriteConfigured) {
 export const tablesDB = appwriteConfigured ? new TablesDB(client) : null;
 export const databaseId = process.env.APPWRITE_DATABASE_ID;
 export const transactionsTableId = process.env.APPWRITE_TRANSACTIONS_TABLE_ID || process.env.APPWRITE_TRANSACTIONS_COLLECTION_ID;
+export const friendsTableIds = {
+  friends: process.env.APPWRITE_FRIENDS_TABLE_ID || 'friends',
+  bills: process.env.APPWRITE_SHARED_BILLS_TABLE_ID || 'shared_bills',
+  splits: process.env.APPWRITE_BILL_SPLITS_TABLE_ID || 'bill_splits',
+  loans: process.env.APPWRITE_FRIEND_LOANS_TABLE_ID || 'friend_loans',
+  settlements: process.env.APPWRITE_FRIEND_SETTLEMENTS_TABLE_ID || 'friend_settlements',
+  transfers: process.env.APPWRITE_FRIEND_TRANSFERS_TABLE_ID || 'friend_transfers',
+};

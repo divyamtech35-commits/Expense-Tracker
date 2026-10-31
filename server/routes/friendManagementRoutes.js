@@ -1,0 +1,20 @@
+import { Router } from 'express';
+import { getBill, getBills, getFriend, getFriends, getLoans, getSettlements, patchBill, patchFriend, postBill, postFriend, postLoan, postSettlement, postTransfer, removeBill, removeFriend } from '../controllers/friendManagementController.js';
+
+const router = Router();
+router.get('/friends', getFriends);
+router.post('/friends', postFriend);
+router.get('/friends/:id', getFriend);
+router.patch('/friends/:id', patchFriend);
+router.delete('/friends/:id', removeFriend);
+router.get('/bills', getBills);
+router.post('/bills', postBill);
+router.get('/bills/:id', getBill);
+router.patch('/bills/:id', patchBill);
+router.delete('/bills/:id', removeBill);
+router.get('/loans', getLoans);
+router.post('/loans', postLoan);
+router.get('/settlements', getSettlements);
+router.post('/settlements', postSettlement);
+router.post('/transfers', postTransfer);
+export default router;

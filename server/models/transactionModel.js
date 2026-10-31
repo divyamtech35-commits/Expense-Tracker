@@ -1,5 +1,5 @@
 import { ID, Query } from 'node-appwrite';
-import { appwriteConfigured, tablesDB, databaseId, transactionsTableId } from '../config/appwrite.js';
+import { appwriteConfigured, tablesDB, databaseId, friendsTableIds, transactionsTableId } from '../config/appwrite.js';
 
 function mapRow(row) {
   return {
@@ -57,4 +57,13 @@ export async function createTransaction(data) {
 
 export async function deleteTransaction(id) {
   await tablesDB.deleteRow({ databaseId, tableId: transactionsTableId, rowId: id });
+}
+
+export async function assertTransactionCanBeDeleted(id) {
+  const row = await tablesDB.getRow({ databaseId, tableId: transactionsTableId, rowId: id });
+  if (row.sourceType || row.category === 'Gift' || row.category === 'Gift received') {
+    throw Object.assign(new Error('This transaction is linked to friend activity. Delete or edit it from the Friends section.'), { status: 409 });
+  }
+  const linkedBills = await tablesDB.listRows({ databaseId, tableId: friendsTableIds.bills, queries: [Query.equal('expenseTransactionId', id), Query.limit(1)] });
+  if (linkedBills.total > 0) throw Object.assign(new Error('This transaction is the personal share of a shared bill. Change it from Split Bills.'), { status: 409 });
 }

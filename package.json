@@ -9,10 +9,10 @@
     "server": "node --env-file-if-exists=.env --watch server/index.js",
     "setup:appwrite": "node --env-file-if-exists=.env server/scripts/setup-appwrite-database.js",
     "build": "vite build",
+    "test": "node --test server/services/friendLedger.test.js",
     "start": "node --env-file-if-exists=.env server/index.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "dotenv": "^18.0.9",
     "express": "^4.21.2",
     "lucide-react": "^0.468.0",

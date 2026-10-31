@@ -2,7 +2,6 @@ import { appwriteConfigured, tablesDB, databaseId } from '../config/appwrite.js'
 import { assertCompatibleColumns, defaultSettings, settingsColumns } from '../config/appwriteSchema.js';
 
 const settingsTableId = process.env.APPWRITE_SETTINGS_TABLE_ID || 'settings';
-const settingsRowId = 'default';
 const listKeys = new Set(['expenseCategories', 'incomeCategories', 'paymentMethods']);
 let settingsWriteQueue = Promise.resolve();
 let settingsTableReady;
@@ -51,18 +50,19 @@ async function ensureSettingsTable() {
 }
 
 async function ensureDefaultSettingsRow() {
+  const rowId = 'default';
   try {
-    return await tablesDB.getRow({ databaseId, tableId: settingsTableId, rowId: settingsRowId });
+    return await tablesDB.getRow({ databaseId, tableId: settingsTableId, rowId });
   } catch (error) {
     if (!isAppwriteCode(error, 404)) throw error;
   }
 
   try {
-    return await tablesDB.createRow({ databaseId, tableId: settingsTableId, rowId: settingsRowId, data: defaultSettings });
+    return await tablesDB.createRow({ databaseId, tableId: settingsTableId, rowId, data: defaultSettings });
   } catch (error) {
     // Another request may have inserted the singleton row concurrently.
     if (!isAppwriteCode(error, 409)) throw error;
-    return tablesDB.getRow({ databaseId, tableId: settingsTableId, rowId: settingsRowId });
+    return tablesDB.getRow({ databaseId, tableId: settingsTableId, rowId });
   }
 }
 
@@ -85,7 +85,7 @@ export async function getSettings() {
   if (!appwriteConfigured) throw new Error('Appwrite is not configured.');
   await ensureSettingsTable();
   try {
-    return mapSettings(await tablesDB.getRow({ databaseId, tableId: settingsTableId, rowId: settingsRowId }));
+    return mapSettings(await tablesDB.getRow({ databaseId, tableId: settingsTableId, rowId: 'default' }));
   } catch (error) {
     if (!isAppwriteCode(error, 404)) throw error;
     invalidateSettingsTableCache();
@@ -100,7 +100,7 @@ async function saveSettings(settings) {
     const row = await tablesDB.updateRow({
       databaseId,
       tableId: settingsTableId,
-      rowId: settingsRowId,
+      rowId: 'default',
       data: settings,
     });
     return mapSettings(row);
@@ -112,7 +112,7 @@ async function saveSettings(settings) {
     const row = await tablesDB.updateRow({
       databaseId,
       tableId: settingsTableId,
-      rowId: settingsRowId,
+      rowId: 'default',
       data: settings,
     });
     return mapSettings(row);

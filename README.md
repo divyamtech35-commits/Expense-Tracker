@@ -8,9 +8,11 @@ React + Vite frontend and Express API organized with MVC-style server folders. T
 2. Set the table ID if you want a name other than `transactions`.
 3. Run `npm install`, then `npm run setup:appwrite`.
 
-The setup script only creates the `transactions` and `settings` tables inside the database identified by `APPWRITE_DATABASE_ID`; it does not create a database. It defines transaction columns, stores categories/payment methods/budget/currency in a settings row, and adds a date index. The script is safe to rerun and leaves existing tables and settings in place. The server also creates the Settings table and its initial row on the first settings request if they are missing.
+The setup script only creates tables inside the database identified by `APPWRITE_DATABASE_ID`; it does not create a database. It checks existing tables before creating `transactions`, `settings`, `friends`, `shared_bills`, `bill_splits`, `friend_loans`, `friend_settlements`, and `friend_transfers`. Existing tables with incompatible columns produce an error so you can correct the schema without losing data. The script is safe to rerun and leaves existing rows in place. Optional table IDs can be set in `.env` using the `APPWRITE_*_TABLE_ID` entries in `.env.example`.
 
-Run `npm run dev` to start the app. Keep the Appwrite API key in the server `.env`; never expose it in frontend code.
+Run `npm run dev` for local development. Keep the Appwrite API key in server-only environment variables; never expose it in frontend code.
+
+For a single-service deployment, configure the build command as `npm install && npm run build` and the start command as `npm start`. Express serves the built React app and API from the same origin, avoiding reliance on Vite's development proxy in production. Set the Appwrite environment variables in the hosting provider. Do not publish `.env`.
 
 ## MVC structure
 
@@ -21,4 +23,4 @@ Run `npm run dev` to start the app. Keep the Appwrite API key in the server `.en
 - `server/scripts/setup-appwrite-database.js` — table setup for an existing database
 - `server/index.js` — Express app setup
 
-Categories, payment methods, daily guide, and currency are managed in Settings and stored in TablesDB. Dashboard totals and transaction lists come from the database; the dashboard and transaction dates use the current local date.
+Categories, payment methods, daily guide, and currency are managed in Settings and stored in TablesDB. Friend bills, loans, gifts, and settlements are stored separately; bill shares and repayments use integer paise, and settlements update balances transactionally without creating income or expense rows. Linked bill and gift transactions cannot be independently deleted from the transaction list. Run `npm test` for the money-splitting and repayment domain tests.

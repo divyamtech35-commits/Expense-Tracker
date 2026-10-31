@@ -30,6 +30,7 @@ export async function postTransaction(req, res, next) {
 export async function removeTransaction(req, res, next) {
   if (!appwriteConfigured) return res.status(503).json({ message: 'Appwrite is not configured.' });
   try {
+    await Transaction.assertTransactionCanBeDeleted(req.params.id);
     await Transaction.deleteTransaction(req.params.id);
     res.json({ message: 'Transaction deleted.' });
   } catch (error) {

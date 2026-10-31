@@ -5,6 +5,8 @@ export const transactionColumns = [
   { key: 'note', type: 'varchar', size: 255, required: false },
   { key: 'date', type: 'varchar', size: 10, required: true },
   { key: 'paymentMethod', type: 'varchar', size: 100, required: true },
+  { key: 'sourceType', type: 'varchar', size: 32, required: false },
+  { key: 'sourceId', type: 'varchar', size: 36, required: false },
 ];
 
 export const settingsColumns = [
@@ -13,6 +15,16 @@ export const settingsColumns = [
   { key: 'paymentMethods', type: 'varchar', size: 100, array: true, required: true },
   { key: 'dailyBudget', type: 'double', required: true },
   { key: 'currency', type: 'varchar', size: 3, required: true },
+];
+
+const col = (key, type, size = undefined, required = true) => ({ key, type, ...(size ? { size } : {}), required });
+export const friendsFeatureTables = [
+  { id: 'friends', name: 'Friends', columns: [col('name', 'varchar', 120), col('mobile', 'varchar', 40, false), col('notes', 'varchar', 500, false), col('archived', 'boolean')], indexes: [['name']] },
+  { id: 'shared_bills', name: 'Shared bills', columns: [col('title', 'varchar', 160), col('description', 'varchar', 500, false), col('totalMinor', 'integer'), col('date', 'varchar', 10), col('payerId', 'varchar', 36), col('splitMethod', 'varchar', 12), col('category', 'varchar', 100, false), col('paymentMethod', 'varchar', 100, false), col('expenseTransactionId', 'varchar', 36, false)], indexes: [['date'], ['payerId'], ['expenseTransactionId']] },
+  { id: 'bill_splits', name: 'Bill splits', columns: [col('billId', 'varchar', 36), col('participantId', 'varchar', 36), col('shareMinor', 'integer'), col('outstandingMinor', 'integer')], indexes: [['billId'], ['participantId']] },
+  { id: 'friend_loans', name: 'Friend loans', columns: [col('friendId', 'varchar', 36), col('direction', 'varchar', 8), col('originalMinor', 'integer'), col('repaidMinor', 'integer'), col('outstandingMinor', 'integer'), col('date', 'varchar', 10), col('dueDate', 'varchar', 10, false), col('purpose', 'varchar', 255), col('paymentMethod', 'varchar', 100), col('status', 'varchar', 16)], indexes: [['friendId'], ['date'], ['status']] },
+  { id: 'friend_settlements', name: 'Friend settlements', columns: [col('friendId', 'varchar', 36), col('direction', 'varchar', 8), col('amountMinor', 'integer'), col('date', 'varchar', 10), col('paymentMethod', 'varchar', 100), col('relatedType', 'varchar', 12), col('relatedId', 'varchar', 36), col('requestId', 'varchar', 36)], indexes: [['friendId'], ['date'], ['relatedId'], { attributes: ['requestId'], type: 'unique' }] },
+  { id: 'friend_transfers', name: 'Friend transfers', columns: [col('friendId', 'varchar', 36), col('direction', 'varchar', 8), col('amountMinor', 'integer'), col('date', 'varchar', 10), col('purpose', 'varchar', 255), col('paymentMethod', 'varchar', 100), col('kind', 'varchar', 12), col('transactionId', 'varchar', 36, false)], indexes: [['friendId'], ['date']] },
 ];
 
 export const defaultSettings = {
@@ -29,7 +41,8 @@ export function assertCompatibleColumns(table, expectedColumns) {
     const actual = actualColumns.get(expected.key);
     if (!actual) return true;
 
-    const expectedTypes = expected.type === 'double' ? ['double', 'float']
+    const expectedTypes = expected.type === 'varchar' ? ['varchar', 'string']
+      : expected.type === 'double' ? ['double', 'float']
       : expected.format === 'enum' ? ['string', 'enum']
         : [expected.type];
     if (!expectedTypes.includes(actual.type)) return true;
