@@ -1,43 +1,60 @@
 import { ID, Query } from 'node-appwrite';
-import { appwriteConfigured, databases, databaseId, transactionsCollectionId } from '../config/appwrite.js';
+import { appwriteConfigured, tablesDB, databaseId, transactionsTableId } from '../config/appwrite.js';
 
-const toTransaction = (document) => ({
-  id: document.$id,
-  type: document.type,
-  amount: Number(document.amount),
-  category: document.category,
-  note: document.note || '',
-  date: document.date,
-  paymentMethod: document.paymentMethod || 'Card',
-  createdAt: document.$createdAt,
-});
+function mapRow(row) {
+  return {
+    id: row.$id,
+    type: row.type,
+    amount: Number(row.amount),
+    category: row.category,
+    note: row.note || '',
+    date: row.date,
+    paymentMethod: row.paymentMethod,
+    createdAt: row.$createdAt,
+  };
+}
 
 export async function listTransactions({ month } = {}) {
   if (!appwriteConfigured) return [];
-  const queries = [Query.orderDesc('date'), Query.limit(100)];
+  const baseQueries = [Query.orderDesc('date')];
   if (month && /^\d{4}-\d{2}$/.test(month)) {
     const [year, monthNumber] = month.split('-').map(Number);
     const start = `${month}-01`;
-    const endDate = new Date(Date.UTC(year, monthNumber, 0));
-    const end = `${month}-${String(endDate.getUTCDate()).padStart(2, '0')}`;
-    queries.push(Query.greaterThanEqual('date', start), Query.lessThanEqual('date', end));
+    const nextMonth = new Date(Date.UTC(year, monthNumber, 1));
+    const endExclusive = `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    baseQueries.push(Query.greaterThanEqual('date', start), Query.lessThan('date', endExclusive));
   }
-  const result = await databases.listDocuments(databaseId, transactionsCollectionId, queries);
-  return result.documents.map(toTransaction);
+  const rows = [];
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await tablesDB.listRows({
+      databaseId,
+      tableId: transactionsTableId,
+      queries: [...baseQueries, Query.limit(pageSize), Query.offset(offset)],
+    });
+    rows.push(...result.rows);
+    if (rows.length >= result.total || result.rows.length < pageSize) break;
+  }
+  return rows.map(mapRow);
 }
 
 export async function createTransaction(data) {
-  const document = await databases.createDocument(databaseId, transactionsCollectionId, ID.unique(), {
-    type: data.type,
-    amount: Number(data.amount),
-    category: data.category.trim(),
-    note: data.note?.trim() || '',
-    date: data.date,
-    paymentMethod: data.paymentMethod || 'Card',
+  const row = await tablesDB.createRow({
+    databaseId,
+    tableId: transactionsTableId,
+    rowId: ID.unique(),
+    data: {
+      type: data.type,
+      amount: Number(data.amount),
+      category: data.category.trim(),
+      note: data.note?.trim() || '',
+      date: data.date,
+      paymentMethod: data.paymentMethod,
+    },
   });
-  return toTransaction(document);
+  return mapRow(row);
 }
 
 export async function deleteTransaction(id) {
-  await databases.deleteDocument(databaseId, transactionsCollectionId, id);
+  await tablesDB.deleteRow({ databaseId, tableId: transactionsTableId, rowId: id });
 }

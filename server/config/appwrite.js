@@ -1,10 +1,19 @@
-import { Client, Databases } from 'node-appwrite';
+import { Client, TablesDB } from 'node-appwrite';
 
-const requiredEnv = ['APPWRITE_ENDPOINT', 'APPWRITE_PROJECT_ID', 'APPWRITE_API_KEY', 'APPWRITE_DATABASE_ID', 'APPWRITE_TRANSACTIONS_COLLECTION_ID'];
-const missingConfig = requiredEnv.filter((key) => !process.env[key]);
+const requiredEnv = [
+  'APPWRITE_ENDPOINT',
+  'APPWRITE_PROJECT_ID',
+  'APPWRITE_API_KEY',
+  'APPWRITE_DATABASE_ID',
+];
 
-export const appwriteConfigured = missingConfig.length === 0;
-export const missingAppwriteConfig = missingConfig;
+export const missingAppwriteConfig = [
+  ...requiredEnv.filter((key) => !process.env[key]),
+  ...(!process.env.APPWRITE_TRANSACTIONS_TABLE_ID && !process.env.APPWRITE_TRANSACTIONS_COLLECTION_ID
+    ? ['APPWRITE_TRANSACTIONS_TABLE_ID']
+    : []),
+];
+export const appwriteConfigured = missingAppwriteConfig.length === 0;
 
 const client = new Client();
 if (appwriteConfigured) {
@@ -13,6 +22,6 @@ if (appwriteConfigured) {
     .setKey(process.env.APPWRITE_API_KEY);
 }
 
-export const databases = appwriteConfigured ? new Databases(client) : null;
+export const tablesDB = appwriteConfigured ? new TablesDB(client) : null;
 export const databaseId = process.env.APPWRITE_DATABASE_ID;
-export const transactionsCollectionId = process.env.APPWRITE_TRANSACTIONS_COLLECTION_ID;
+export const transactionsTableId = process.env.APPWRITE_TRANSACTIONS_TABLE_ID || process.env.APPWRITE_TRANSACTIONS_COLLECTION_ID;
