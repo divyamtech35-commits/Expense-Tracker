@@ -38,6 +38,27 @@ export async function listTransactions({ month } = {}) {
   return rows.map(mapRow);
 }
 
+export async function getPaymentMethodBalances() {
+  if (!appwriteConfigured) return { cash: 0, upi: 0 };
+  const balancesMinor = { cash: 0, upi: 0 };
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await tablesDB.listRows({
+      databaseId,
+      tableId: transactionsTableId,
+      queries: [Query.limit(pageSize), Query.offset(offset)],
+    });
+    for (const row of result.rows) {
+      const method = String(row.paymentMethod || '').trim().toLowerCase();
+      if (!Object.hasOwn(balancesMinor, method) || !['income', 'expense'].includes(row.type)) continue;
+      const amountMinor = Math.round(Number(row.amount) * 100);
+      balancesMinor[method] += row.type === 'income' ? amountMinor : -amountMinor;
+    }
+    if (offset + result.rows.length >= result.total || result.rows.length < pageSize) break;
+  }
+  return { cash: balancesMinor.cash / 100, upi: balancesMinor.upi / 100 };
+}
+
 export async function createTransaction(data) {
   const row = await tablesDB.createRow({
     databaseId,

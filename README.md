@@ -12,7 +12,7 @@ The setup script only creates tables inside the database identified by `APPWRITE
 
 Run `npm run dev` for local development. Keep the Appwrite API key in server-only environment variables; never expose it in frontend code.
 
-For a single-service deployment, configure the build command as `npm install && npm run build` and the start command as `npm start`. Express serves the built React app and API from the same origin, avoiding reliance on Vite's development proxy in production. Set the Appwrite environment variables in the hosting provider. Do not publish `.env`.
+For a single-service deployment, configure the build command as `npm install && npm run build` and the start command as `npm start`. The start script also creates `dist/index.html` if the build phase did not, then Express serves the React app and API from the same origin. Set the Appwrite environment variables in the hosting provider. Do not publish `.env`.
 
 ## MVC structure
 

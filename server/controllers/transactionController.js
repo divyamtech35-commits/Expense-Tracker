@@ -15,6 +15,13 @@ export async function getTransactions(req, res, next) {
   } catch (error) { next(error); }
 }
 
+export async function getPaymentMethodBalances(req, res, next) {
+  if (!appwriteConfigured) return res.status(503).json({ message: `Appwrite is not configured. Add ${missingAppwriteConfig.join(', ')} to your environment.` });
+  try {
+    res.json(await Transaction.getPaymentMethodBalances());
+  } catch (error) { next(error); }
+}
+
 export async function postTransaction(req, res, next) {
   const { type, amount, category, date, note, paymentMethod } = req.body || {};
   if (!['income', 'expense'].includes(type) || !Number.isFinite(Number(amount)) || Number(amount) <= 0 || typeof category !== 'string' || !category.trim() || typeof paymentMethod !== 'string' || !paymentMethod.trim() || !isValidDateOnly(date)) {

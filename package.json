@@ -10,19 +10,19 @@
     "setup:appwrite": "node --env-file-if-exists=.env server/scripts/setup-appwrite-database.js",
     "build": "vite build",
     "test": "node --test server/services/friendLedger.test.js",
-    "start": "node --env-file-if-exists=.env server/index.js"
+    "start": "node --env-file-if-exists=.env server/start.js"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
     "dotenv": "^18.0.9",
     "express": "^4.21.2",
     "lucide-react": "^0.468.0",
     "node-appwrite": "^29.4.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vite": "^6.4.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "concurrently": "^9.1.2",
-    "vite": "^6.0.7"
+    "concurrently": "^9.1.2"
   }
 }

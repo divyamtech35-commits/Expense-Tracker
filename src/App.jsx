@@ -22,6 +22,9 @@ function App() {
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [transactionsError, setTransactionsError] = useState('');
+  const [paymentBalances, setPaymentBalances] = useState(null);
+  const [paymentBalancesError, setPaymentBalancesError] = useState('');
+  const [paymentBalancesRevision, setPaymentBalancesRevision] = useState(0);
   const [savingTransaction, setSavingTransaction] = useState(false);
   const transactionSubmission = useRef(false);
   const settingsMutationQueue = useRef(Promise.resolve());
@@ -35,9 +38,7 @@ function App() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsError, setSettingsError] = useState('');
   const [form, setForm] = useState({ type: 'expense', amount: '', category: '', note: '', date: localDateString(), paymentMethod: '' });
-  const [newCategory, setNewCategory] = useState('');
   const [newPaymentMethod, setNewPaymentMethod] = useState('');
-  const [categorySettingType, setCategorySettingType] = useState('expense');
   const [dailyBudgetDraft, setDailyBudgetDraft] = useState('');
   const [currencyDraft, setCurrencyDraft] = useState('');
   const [activePage, setActivePage] = useState('overview');
@@ -65,6 +66,19 @@ function App() {
       .finally(() => { if (!cancelled) setTransactionsLoading(false); });
     return () => { cancelled = true; };
   }, [month]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/transactions/balances')
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || 'Could not load payment balances.');
+        return result;
+      })
+      .then((result) => { if (!cancelled) { setPaymentBalances(result); setPaymentBalancesError(''); } })
+      .catch((error) => { if (!cancelled) setPaymentBalancesError(error.message); });
+    return () => { cancelled = true; };
+  }, [paymentBalancesRevision]);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,8 +126,7 @@ function App() {
   function goToCurrentMonth() { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); }
   function openForm(type = 'expense') {
     if (!settings) { setToast(settingsError || 'Settings are still loading from the database.'); return; }
-    const typeCategories = type === 'income' ? settings.incomeCategories : settings.expenseCategories;
-    setForm((current) => ({ ...current, type, amount: '', note: '', date: localDateString(), category: typeCategories[0] || '', paymentMethod: settings.paymentMethods[0] || '' }));
+    setForm((current) => ({ ...current, type, amount: '', note: '', date: localDateString(), category: '', paymentMethod: settings.paymentMethods[0] || '' }));
     setModalOpen(true);
   }
   function persistSettings(operation) {
@@ -136,22 +149,20 @@ function App() {
     try { await persistSettings({ action: 'set', key, value }); setToast('Preference saved to the database.'); }
     catch (error) { setToast(error.message); }
   }
-  async function addSetting(kind) {
-    const value = (kind === 'payment' ? newPaymentMethod : newCategory).trim();
+  async function addSetting() {
+    const value = newPaymentMethod.trim();
     if (!value) return;
-    const key = kind === 'payment' ? 'paymentMethods' : `${categorySettingType}Categories`;
     try {
-      await persistSettings({ action: 'add', key, value });
+      await persistSettings({ action: 'add', key: 'paymentMethods', value });
       setToast('Setting saved to the database.');
-      if (kind === 'payment') setNewPaymentMethod('');
-      else setNewCategory('');
+      setNewPaymentMethod('');
     }
     catch (error) { setToast(error.message); }
   }
   async function removeSetting(key, value) {
     try { await persistSettings({ action: 'remove', key, value }); }
     catch (error) { setToast(error.message); return; }
-    setForm((current) => ({ ...current, ...(key === 'paymentMethods' && current.paymentMethod === value ? { paymentMethod: '' } : {}), ...((key === 'incomeCategories' || key === 'expenseCategories') && current.category === value ? { category: '' } : {}) }));
+    setForm((current) => ({ ...current, ...(key === 'paymentMethods' && current.paymentMethod === value ? { paymentMethod: '' } : {}) }));
   }
   async function saveTransaction(event) {
     event.preventDefault();
@@ -163,6 +174,7 @@ function App() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Could not save transaction.');
       setTransactions((current) => [result, ...current]);
+      setPaymentBalancesRevision((current) => current + 1);
       setModalOpen(false);
       setToast(`${form.type === 'expense' ? 'Expense' : 'Income'} saved to the database.`);
     } catch (error) { setToast(error.message); }
@@ -174,6 +186,7 @@ function App() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'Could not delete transaction.');
       setTransactions((current) => current.filter((item) => item.id !== id));
+      setPaymentBalancesRevision((current) => current + 1);
       setToast('Transaction deleted from the database.');
     } catch (error) { setToast(error.message); }
   }
@@ -212,6 +225,8 @@ function App() {
           <article className="metric-card expense-card"><div className="metric-head"><span className="metric-icon expense-icon"><ArrowUpRight size={17} /></span><span className="metric-label">MONEY OUT</span></div><div className="metric-value">{money(expenses, false, currency)}</div><div className="metric-bottom"><span className="metric-note">{monthTransactions.filter((item) => item.type === 'expense').length} expenses this month</span><button className="quick-add expense-quick" onClick={() => openForm('expense')} aria-label="Add expense"><Plus size={15} /></button></div><div className="metric-accent expense-accent" /></article>
         </section>
 
+        <section className="payment-balances"><div className="payment-balances-heading"><div><div className="panel-eyebrow">AVAILABLE BY METHOD</div><h2>Cash &amp; UPI balance</h2></div><span>All-time totals from transactions</span></div><div className="payment-balance-list"><div className="payment-balance-item"><span>Cash</span><strong>{paymentBalances ? money(paymentBalances.cash, false, currency) : '—'}</strong></div><div className="payment-balance-item"><span>UPI</span><strong>{paymentBalances ? money(paymentBalances.upi, false, currency) : '—'}</strong></div></div>{paymentBalancesError && <p className="payment-balance-error">{paymentBalancesError}</p>}</section>
+
         <section className="content-grid"><div className="left-column">
           <article className="panel spending-panel"><div className="panel-heading"><div><div className="panel-eyebrow">THE BIG PICTURE</div><h2>Spending overview</h2></div><span className="period-select">{monthShort} 01 – {String(throughDay).padStart(2, '0')}</span></div><div className="chart-meta"><span><i className="legend-dot actual-dot" /> Daily spending</span>{dailyBudget > 0 && <span><i className="legend-dot average-dot" /> Daily budget</span>}<div className="chart-total">{money(monthToDateExpense, false, currency)} <span>total this month</span></div></div><SpendingChart transactions={monthTransactions} year={month.getFullYear()} monthIndex={month.getMonth()} throughDay={throughDay} dailyBudget={dailyBudget} currency={currency} monthLabel={monthShort} /></article>
           <article className="panel transactions-panel" id="transactions"><div className="panel-heading transactions-heading"><div><div className="panel-eyebrow">YOUR MONEY, MOVING</div><h2>Transactions <span className="transactions-count">{visibleTransactions.length}</span></h2></div><button className="see-all" onClick={exportCsv}>Export <Download size={14} /></button></div><div className="transactions-controls"><div className="transaction-search"><Search size={15} /><input id="transaction-search" placeholder="Find a transaction..." value={query} onChange={(event) => setQuery(event.target.value)} /></div><button className="filter-button" onClick={() => setFilterType((current) => current === 'All transactions' ? 'Expense' : current === 'Expense' ? 'Income' : 'All transactions')}><Settings2 size={14} /> {filterType} <ChevronDown size={13} /></button></div><div className="transaction-table"><div className="table-head"><span>TRANSACTION</span><span>CATEGORY</span><span>DATE</span><span>AMOUNT</span></div>{transactionsLoading ? <div className="empty-state"><strong>Loading transactions…</strong></div> : visibleTransactions.length ? visibleTransactions.slice(0, 6).map((item) => <TransactionRow key={item.id} item={item} currency={currency} onDelete={deleteTransaction} />) : <div className="empty-state"><div className="empty-icon"><Wallet size={20} /></div><strong>{transactionsError ? 'Transactions unavailable' : 'No transactions for this month'}</strong><span>{transactionsError || 'Add a transaction to start building your monthly picture.'}</span>{!transactionsError && <button onClick={() => openForm('expense')}><Plus size={14} /> Add transaction</button>}</div>}</div></article>
@@ -224,8 +239,8 @@ function App() {
         <footer className="page-footer"><span>© {new Date().getFullYear()} Moneta</span><span>Your finances, held with care <span className="footer-heart">♥</span></span><span>{transactionsError || settingsError ? 'Database connection unavailable' : 'Synced with your database'} <i /></span></footer>
       </div> : <FriendsWorkspace page={activePage} settings={settings} onToast={setToast} />}
     </main>
-    {modalOpen && settings && <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setModalOpen(false)}><form className="transaction-modal" onSubmit={saveTransaction}><div className="modal-heading"><div><div className="panel-eyebrow">A SMALL MONEY MOMENT</div><h2>Add a transaction</h2></div><button className="close-button" type="button" onClick={() => setModalOpen(false)} aria-label="Close"><X size={18} /></button></div><div className="type-switch"><button type="button" className={form.type === 'expense' ? 'selected' : ''} onClick={() => setForm({ ...form, type: 'expense', category: settings.expenseCategories[0] || '' })}><ArrowUpRight size={15} /> Expense</button><button type="button" className={form.type === 'income' ? 'selected income-selected' : ''} onClick={() => setForm({ ...form, type: 'income', category: settings.incomeCategories[0] || '' })}><ArrowDownLeft size={15} /> Income</button></div><label className="field-label">AMOUNT <span>{currency} · {currencySymbol(currency)}</span><div className="amount-input"><span>{currencySymbol(currency)}</span><input autoFocus type="number" min="0.01" step="0.01" placeholder="0" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></div></label><div className="form-row"><label className="field-label">CATEGORY<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} required><option value="" disabled>{(form.type === 'income' ? settings.incomeCategories : settings.expenseCategories).length ? 'Choose a category' : 'Add categories in Settings'}</option>{(form.type === 'income' ? settings.incomeCategories : settings.expenseCategories).map((category) => <option key={category} value={category}>{category}</option>)}</select>{!(form.type === 'income' ? settings.incomeCategories : settings.expenseCategories).length && <button type="button" className="field-help-link" onClick={() => { setModalOpen(false); setSettingsOpen(true); setCategorySettingType(form.type); }}>Add category in Settings</button>}</label><label className="field-label">DATE<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required /></label></div><div className="form-row"><label className="field-label">PAYMENT METHOD<select value={form.paymentMethod} onChange={(event) => setForm({ ...form, paymentMethod: event.target.value })} required><option value="" disabled>{settings.paymentMethods.length ? 'Choose a method' : 'Add methods in Settings'}</option>{settings.paymentMethods.map((method) => <option key={method} value={method}>{method}</option>)}</select>{!settings.paymentMethods.length && <button type="button" className="field-help-link" onClick={() => { setModalOpen(false); setSettingsOpen(true); }}>Add payment method in Settings</button>}</label><label className="field-label">NOTE <span>OPTIONAL</span><input type="text" placeholder="What was it for?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label></div><div className="modal-actions"><button type="button" className="cancel-button" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary-button" type="submit" disabled={savingTransaction || !form.category || !form.paymentMethod}><Plus size={16} /> Add {form.type}</button></div><div className="modal-reassurance"><Sparkles size={13} /> Saved to your personal database.</div></form></div>}
-    {settingsOpen && settings && <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setSettingsOpen(false)}><section className="transaction-modal settings-modal"><div className="modal-heading"><div><div className="panel-eyebrow">PREFERENCES</div><h2>Settings</h2></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="Close"><X size={18} /></button></div><p className="settings-intro">These preferences are stored in your Appwrite database and used across the dashboard.</p><div className="settings-section"><div className="settings-section-heading"><div><span className="field-label-title">CATEGORIES</span><p>Categories available for income or expenses.</p></div><select className="settings-type-select" value={categorySettingType} onChange={(event) => setCategorySettingType(event.target.value)}><option value="expense">Expenses</option><option value="income">Income</option></select></div><div className="setting-entry"><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && (event.preventDefault(), addSetting('category'))} placeholder="Add a category" /><button className="primary-button" onClick={() => addSetting('category')}><Plus size={15} /> Add</button></div><SettingList items={settings[`${categorySettingType}Categories`]} onRemove={(value) => removeSetting(`${categorySettingType}Categories`, value)} /></div><div className="settings-section"><div className="settings-section-heading"><div><span className="field-label-title">PAYMENT METHODS</span><p>Available payment methods for transactions.</p></div></div><div className="setting-entry"><input value={newPaymentMethod} onChange={(event) => setNewPaymentMethod(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && (event.preventDefault(), addSetting('payment'))} placeholder="Add a payment method" /><button className="primary-button" onClick={() => addSetting('payment')}><Plus size={15} /> Add</button></div><SettingList items={settings.paymentMethods} onRemove={(value) => removeSetting('paymentMethods', value)} /></div><div className="settings-section preferences-fields"><label className="field-label">DAILY SPENDING GUIDE<input type="number" min="0" step="0.01" value={dailyBudgetDraft} onChange={(event) => setDailyBudgetDraft(event.target.value)} onBlur={() => savePreference('dailyBudget', Number(dailyBudgetDraft))} /></label><label className="field-label">CURRENCY CODE<input type="text" maxLength="3" value={currencyDraft} onChange={(event) => setCurrencyDraft(event.target.value.toUpperCase())} onBlur={() => savePreference('currency', currencyDraft.toUpperCase())} /></label></div><div className="modal-actions"><button className="primary-button" onClick={() => setSettingsOpen(false)}>Done</button></div></section></div>}
+    {modalOpen && settings && <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setModalOpen(false)}><form className="transaction-modal" onSubmit={saveTransaction}><div className="modal-heading"><div><div className="panel-eyebrow">A SMALL MONEY MOMENT</div><h2>Add a transaction</h2></div><button className="close-button" type="button" onClick={() => setModalOpen(false)} aria-label="Close"><X size={18} /></button></div><div className="type-switch"><button type="button" className={form.type === 'expense' ? 'selected' : ''} onClick={() => setForm({ ...form, type: 'expense' })}><ArrowUpRight size={15} /> Expense</button><button type="button" className={form.type === 'income' ? 'selected income-selected' : ''} onClick={() => setForm({ ...form, type: 'income' })}><ArrowDownLeft size={15} /> Income</button></div><label className="field-label">AMOUNT <span>{currency} · {currencySymbol(currency)}</span><div className="amount-input"><span>{currencySymbol(currency)}</span><input autoFocus type="number" min="0.01" step="0.01" placeholder="0" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} required /></div></label><div className="form-row"><label className="field-label">CATEGORY<input type="text" maxLength="100" placeholder="Type a category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} required /></label><label className="field-label">DATE<input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required /></label></div><div className="form-row"><label className="field-label">PAYMENT METHOD<select value={form.paymentMethod} onChange={(event) => setForm({ ...form, paymentMethod: event.target.value })} required><option value="" disabled>{settings.paymentMethods.length ? 'Choose a method' : 'Add methods in Settings'}</option>{settings.paymentMethods.map((method) => <option key={method} value={method}>{method}</option>)}</select>{!settings.paymentMethods.length && <button type="button" className="field-help-link" onClick={() => { setModalOpen(false); setSettingsOpen(true); }}>Add payment method in Settings</button>}</label><label className="field-label">NOTE <span>OPTIONAL</span><input type="text" placeholder="What was it for?" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} /></label></div><div className="modal-actions"><button type="button" className="cancel-button" onClick={() => setModalOpen(false)}>Cancel</button><button className="primary-button" type="submit" disabled={savingTransaction || !form.category || !form.paymentMethod}><Plus size={16} /> Add {form.type}</button></div><div className="modal-reassurance"><Sparkles size={13} /> Saved to your personal database.</div></form></div>}
+    {settingsOpen && settings && <div className="modal-backdrop" onClick={(event) => event.target === event.currentTarget && setSettingsOpen(false)}><section className="transaction-modal settings-modal"><div className="modal-heading"><div><div className="panel-eyebrow">PREFERENCES</div><h2>Settings</h2></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="Close"><X size={18} /></button></div><p className="settings-intro">These preferences are stored in your Appwrite database and used across the dashboard.</p><div className="settings-section"><div className="settings-section-heading"><div><span className="field-label-title">PAYMENT METHODS</span><p>Available payment methods for transactions.</p></div></div><div className="setting-entry"><input value={newPaymentMethod} onChange={(event) => setNewPaymentMethod(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && (event.preventDefault(), addSetting('payment'))} placeholder="Add a payment method" /><button className="primary-button" onClick={addSetting}><Plus size={15} /> Add</button></div><SettingList items={settings.paymentMethods} onRemove={(value) => removeSetting('paymentMethods', value)} /></div><div className="settings-section preferences-fields"><label className="field-label">DAILY SPENDING GUIDE<input type="number" min="0" step="0.01" value={dailyBudgetDraft} onChange={(event) => setDailyBudgetDraft(event.target.value)} onBlur={() => savePreference('dailyBudget', Number(dailyBudgetDraft))} /></label><label className="field-label">CURRENCY CODE<input type="text" maxLength="3" value={currencyDraft} onChange={(event) => setCurrencyDraft(event.target.value.toUpperCase())} onBlur={() => savePreference('currency', currencyDraft.toUpperCase())} /></label></div><div className="modal-actions"><button className="primary-button" onClick={() => setSettingsOpen(false)}>Done</button></div></section></div>}
     {toast && <div className="toast"><span><Sparkles size={15} /></span>{toast}<button onClick={() => setToast('')} aria-label="Dismiss"><X size={14} /></button></div>}
   </div>;
 }
