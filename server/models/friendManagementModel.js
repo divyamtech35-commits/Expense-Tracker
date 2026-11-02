@@ -71,6 +71,32 @@ export async function settleOutstanding({ friendId, direction, amountMinor, rela
   });
 }
 
+export async function deleteLoan(id) {
+  return runAtomic(async (transactionId) => {
+    const loan = await row('loans', id, transactionId);
+    const settlements = await listRowsInTransaction('settlements', [Query.equal('relatedId', id)], transactionId);
+    if (loan.repaidMinor > 0 || settlements.some((item) => item.relatedType === 'loan')) {
+      throw Object.assign(new Error('This loan has repayment history and cannot be deleted.'), { status: 409 });
+    }
+    await remove('loans', id, transactionId);
+  });
+}
+
+export async function updateLoan(id, data) {
+  return runAtomic(async (transactionId) => {
+    const loan = await row('loans', id, transactionId);
+    const settlements = await listRowsInTransaction('settlements', [Query.equal('relatedId', id)], transactionId);
+    if (loan.direction !== data.direction) throw Object.assign(new Error('A loan cannot be moved between Money given and Money borrowed.'), { status: 409 });
+    if (settlements.some((item) => item.relatedType === 'loan') && loan.friendId !== data.friendId) {
+      throw Object.assign(new Error('The friend cannot be changed after repayments have been recorded.'), { status: 409 });
+    }
+    if (data.originalMinor < loan.repaidMinor) throw Object.assign(new Error('The amount cannot be less than the repayments already recorded.'), { status: 409 });
+    const outstandingMinor = data.originalMinor - loan.repaidMinor;
+    const status = outstandingMinor === 0 ? 'settled' : loan.repaidMinor > 0 ? 'partially_paid' : 'pending';
+    return update('loans', id, { friendId: data.friendId, originalMinor: data.originalMinor, outstandingMinor, date: data.date, dueDate: data.dueDate, purpose: data.purpose, paymentMethod: data.paymentMethod, status }, transactionId);
+  });
+}
+
 export async function listRowsInTransaction(key, filters, transactionId) {
   const result = await tablesDB.listRows({ databaseId, tableId: table(key), queries: [...filters, Query.limit(100)], transactionId });
   if (result.total > result.rows.length) throw new Error('Unexpectedly large split list; settlement was not applied.');

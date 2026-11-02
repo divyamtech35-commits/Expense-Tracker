@@ -86,6 +86,16 @@ export async function addLoan(input) {
   return Db.createRow('loans', { friendId: input.friendId, direction: input.direction, originalMinor, repaidMinor: 0, outstandingMinor: originalMinor, date: input.date, dueDate: input.dueDate || '', purpose: input.purpose.trim(), paymentMethod: input.paymentMethod, status: 'pending' });
 }
 
+export async function editLoan(id, input) {
+  if (!await exists(input.friendId)) throw invalid('Choose an active friend.');
+  const originalMinor = amountToMinorUnits(input.amount);
+  if (!dateOnly(input.date) || (input.dueDate && !dateOnly(input.dueDate))) throw invalid('Enter valid loan and due dates.');
+  if (!['given', 'borrowed'].includes(input.direction)) throw invalid('Choose money given or borrowed.');
+  if (typeof input.purpose !== 'string' || !input.purpose.trim() || input.purpose.trim().length > 255) throw invalid('Enter a purpose up to 255 characters.');
+  if (typeof input.paymentMethod !== 'string' || !input.paymentMethod.trim() || input.paymentMethod.trim().length > 100) throw invalid('Enter a valid payment method.');
+  return Db.updateLoan(id, { ...input, originalMinor, dueDate: input.dueDate || '', purpose: input.purpose.trim(), paymentMethod: input.paymentMethod.trim() });
+}
+
 export async function addTransfer(input) {
   if (!await exists(input.friendId)) throw invalid('Choose an active friend.');
   const amountMinor = amountToMinorUnits(input.amount);
@@ -147,6 +157,10 @@ export async function listBillsWithSplits() {
 export async function listLoansForApi() {
   const loans = await Db.listLoans();
   return loans.map((loan) => ({ ...loan, original: minorToAmount(loan.originalMinor), repaid: minorToAmount(loan.repaidMinor), outstanding: minorToAmount(loan.outstandingMinor), overdue: Boolean(loan.dueDate && loan.outstandingMinor && loan.dueDate < new Date().toISOString().slice(0, 10)) }));
+}
+
+export async function deleteLoan(id) {
+  return Db.deleteLoan(id);
 }
 
 export async function listSettlementsForApi() {

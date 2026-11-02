@@ -55,6 +55,15 @@ export async function postLoan(req, res, next) {
   if (!['given', 'borrowed'].includes(body.direction) || typeof body.friendId !== 'string' || typeof body.amount !== 'string' && typeof body.amount !== 'number' || !text(body.date, 10, true) || !text(body.purpose, 255, true) || !text(body.paymentMethod, 100, true)) return res.status(400).json({ message: 'Enter a friend, amount, date, purpose, and payment method.' });
   try { res.status(201).json(await FriendManagement.addLoan(body)); } catch (error) { forwardWriteError(error, next); }
 }
+export async function patchLoan(req, res, next) {
+  const body = req.body || {};
+  if (!['given', 'borrowed'].includes(body.direction) || typeof body.friendId !== 'string' || typeof body.amount !== 'string' && typeof body.amount !== 'number' || !text(body.date, 10, true) || !text(body.dueDate || '', 10) || !text(body.purpose, 255, true) || !text(body.paymentMethod, 100, true)) return res.status(400).json({ message: 'Enter a friend, amount, date, purpose, and payment method.' });
+  try { res.json(await FriendManagement.editLoan(req.params.id, body)); } catch (error) { forwardWriteError(error, next); }
+}
+export async function removeLoan(req, res, next) {
+  try { await FriendManagement.deleteLoan(req.params.id); res.json({ message: 'Loan deleted.' }); }
+  catch (error) { next(error); }
+}
 export async function getSettlements(_req, res, next) {
   try { res.json({ settlements: await FriendManagement.listSettlementsForApi() }); } catch (error) { next(error); }
 }

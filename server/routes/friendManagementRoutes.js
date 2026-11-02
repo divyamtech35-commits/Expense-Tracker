@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getBill, getBills, getFriend, getFriends, getLoans, getSettlements, patchBill, patchFriend, postBill, postFriend, postLoan, postSettlement, postTransfer, removeBill, removeFriend } from '../controllers/friendManagementController.js';
+import { getBill, getBills, getFriend, getFriends, getLoans, getSettlements, patchBill, patchFriend, patchLoan, postBill, postFriend, postLoan, postSettlement, postTransfer, removeBill, removeFriend, removeLoan } from '../controllers/friendManagementController.js';
 
 const router = Router();
 router.get('/friends', getFriends);
@@ -14,6 +14,8 @@ router.patch('/bills/:id', patchBill);
 router.delete('/bills/:id', removeBill);
 router.get('/loans', getLoans);
 router.post('/loans', postLoan);
+router.patch('/loans/:id', patchLoan);
+router.delete('/loans/:id', removeLoan);
 router.get('/settlements', getSettlements);
 router.post('/settlements', postSettlement);
 router.post('/transfers', postTransfer);
