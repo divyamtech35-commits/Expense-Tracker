@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import transactionRoutes from './routes/transactionRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import friendManagementRoutes from './routes/friendManagementRoutes.js';
+import savingsRoutes from './routes/savingsRoutes.js';
 import { appwriteConfigured, missingAppwriteConfig } from './config/appwrite.js';
 
 const app = express();
@@ -17,6 +18,10 @@ app.use('/api/friends-module', (req, res, next) => {
   if (!appwriteConfigured) return res.status(503).json({ message: `Appwrite is not configured. Add ${missingAppwriteConfig.join(', ')} to your environment.` });
   next();
 }, friendManagementRoutes);
+app.use('/api/savings', (req, res, next) => {
+  if (!appwriteConfigured) return res.status(503).json({ message: `Appwrite is not configured. Add ${missingAppwriteConfig.join(', ')} to your environment.` });
+  next();
+}, savingsRoutes);
 app.use('/api', (_req, res) => res.status(404).json({ message: 'API route not found.' }));
 const clientBuildPath = resolve(dirname(fileURLToPath(import.meta.url)), '../dist');
 app.use(express.static(clientBuildPath));

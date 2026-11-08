@@ -8,7 +8,7 @@ React + Vite frontend and Express API organized with MVC-style server folders. T
 2. Set the table ID if you want a name other than `transactions`.
 3. Run `npm install`, then `npm run setup:appwrite`.
 
-The setup script only creates tables inside the database identified by `APPWRITE_DATABASE_ID`; it does not create a database. It checks existing tables before creating `transactions`, `settings`, `friends`, `shared_bills`, `bill_splits`, `friend_loans`, `friend_settlements`, and `friend_transfers`. Existing tables with incompatible columns produce an error so you can correct the schema without losing data. The script is safe to rerun and leaves existing rows in place. Optional table IDs can be set in `.env` using the `APPWRITE_*_TABLE_ID` entries in `.env.example`.
+The setup script only creates tables inside the database identified by `APPWRITE_DATABASE_ID`; it does not create a database. It checks existing tables before creating `transactions`, `settings`, the friends tables, and the separate `savings_entries` and `savings_accounts` tables. Existing tables with incompatible columns produce an error so you can correct the schema without losing data. The script is safe to rerun and leaves existing rows in place. Optional table IDs can be set in `.env` using the `APPWRITE_*_TABLE_ID` entries in `.env.example`.
 
 Run `npm run dev` for local development. Keep the Appwrite API key in server-only environment variables; never expose it in frontend code.
 
@@ -24,3 +24,5 @@ For a single-service deployment, configure the build command as `npm install && 
 - `server/index.js` — Express app setup
 
 Categories, payment methods, daily guide, and currency are managed in Settings and stored in TablesDB. Friend bills, loans, gifts, and settlements are stored separately; bill shares and repayments use integer paise, and settlements update balances transactionally without creating income or expense rows. Linked bill and gift transactions cannot be independently deleted from the transaction list. Run `npm test` for the money-splitting and repayment domain tests.
+
+Savings deposits and withdrawals are stored only in `savings_entries`; the `savings_accounts` table keeps the balance and lifetime totals consistent with those entries. Savings activity is excluded from regular transactions and dashboard income/expense totals.

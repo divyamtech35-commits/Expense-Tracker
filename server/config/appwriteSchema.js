@@ -25,6 +25,8 @@ export const friendsFeatureTables = [
   { id: 'friend_loans', name: 'Friend loans', columns: [col('friendId', 'varchar', 36), col('direction', 'varchar', 8), col('originalMinor', 'integer'), col('repaidMinor', 'integer'), col('outstandingMinor', 'integer'), col('date', 'varchar', 10), col('dueDate', 'varchar', 10, false), col('purpose', 'varchar', 255), col('paymentMethod', 'varchar', 100), col('status', 'varchar', 16)], indexes: [['friendId'], ['date'], ['status']] },
   { id: 'friend_settlements', name: 'Friend settlements', columns: [col('friendId', 'varchar', 36), col('direction', 'varchar', 8), col('amountMinor', 'integer'), col('date', 'varchar', 10), col('paymentMethod', 'varchar', 100), col('relatedType', 'varchar', 12), col('relatedId', 'varchar', 36), col('requestId', 'varchar', 36)], indexes: [['friendId'], ['date'], ['relatedId'], { attributes: ['requestId'], type: 'unique' }] },
   { id: 'friend_transfers', name: 'Friend transfers', columns: [col('friendId', 'varchar', 36), col('direction', 'varchar', 8), col('amountMinor', 'integer'), col('date', 'varchar', 10), col('purpose', 'varchar', 255), col('paymentMethod', 'varchar', 100), col('kind', 'varchar', 12), col('transactionId', 'varchar', 36, false)], indexes: [['friendId'], ['date']] },
+  { id: 'savings_entries', name: 'Savings entries', columns: [col('type', 'varchar', 12), col('amountMinor', 'integer'), col('date', 'varchar', 10), col('description', 'varchar', 255), col('paymentMethod', 'varchar', 100, false)], indexes: [['date'], ['type']] },
+  { id: 'savings_accounts', name: 'Savings accounts', columns: [col('balanceMinor', 'integer'), col('totalAddedMinor', 'integer'), col('totalSpentMinor', 'integer')] },
 ];
 
 export const defaultSettings = {

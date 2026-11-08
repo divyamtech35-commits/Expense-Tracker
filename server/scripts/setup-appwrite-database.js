@@ -25,6 +25,8 @@ const featureTableIds = {
   friend_loans: process.env.APPWRITE_FRIEND_LOANS_TABLE_ID || 'friend_loans',
   friend_settlements: process.env.APPWRITE_FRIEND_SETTLEMENTS_TABLE_ID || 'friend_settlements',
   friend_transfers: process.env.APPWRITE_FRIEND_TRANSFERS_TABLE_ID || 'friend_transfers',
+  savings_entries: process.env.APPWRITE_SAVINGS_ENTRIES_TABLE_ID || 'savings_entries',
+  savings_accounts: process.env.APPWRITE_SAVINGS_ACCOUNTS_TABLE_ID || 'savings_accounts',
 };
 const client = new Client()
   .setEndpoint(process.env.APPWRITE_ENDPOINT.trim())

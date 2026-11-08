@@ -32,4 +32,6 @@ export const friendsTableIds = {
   loans: process.env.APPWRITE_FRIEND_LOANS_TABLE_ID || 'friend_loans',
   settlements: process.env.APPWRITE_FRIEND_SETTLEMENTS_TABLE_ID || 'friend_settlements',
   transfers: process.env.APPWRITE_FRIEND_TRANSFERS_TABLE_ID || 'friend_transfers',
+  savings: process.env.APPWRITE_SAVINGS_ENTRIES_TABLE_ID || 'savings_entries',
+  savingsAccounts: process.env.APPWRITE_SAVINGS_ACCOUNTS_TABLE_ID || 'savings_accounts',
 };
