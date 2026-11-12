@@ -56,6 +56,21 @@ export async function getPaymentMethodBalances() {
     }
     if (offset + result.rows.length >= result.total || result.rows.length < pageSize) break;
   }
+  for (let offset = 0; ; offset += pageSize) {
+    const result = await tablesDB.listRows({
+      databaseId,
+      tableId: friendsTableIds.settlements,
+      queries: [Query.limit(pageSize), Query.offset(offset)],
+    });
+    for (const row of result.rows) {
+      const method = String(row.paymentMethod || '').trim().toLowerCase();
+      if (!Object.hasOwn(balancesMinor, method) || !['received', 'paid'].includes(row.direction)) continue;
+      const amountMinor = Number(row.amountMinor);
+      if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0) continue;
+      balancesMinor[method] += row.direction === 'received' ? amountMinor : -amountMinor;
+    }
+    if (offset + result.rows.length >= result.total || result.rows.length < pageSize) break;
+  }
   return { cash: balancesMinor.cash / 100, upi: balancesMinor.upi / 100 };
 }
 

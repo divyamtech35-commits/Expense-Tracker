@@ -163,8 +163,8 @@ export async function deleteLoan(id) {
   return Db.deleteLoan(id);
 }
 
-export async function listSettlementsForApi() {
-  const settlements = await Db.listSettlements();
+export async function listSettlementsForApi(month) {
+  const settlements = await Db.listSettlements(month);
   return settlements.map((settlement) => ({ ...settlement, amount: minorToAmount(settlement.amountMinor) }));
 }
 

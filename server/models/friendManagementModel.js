@@ -26,7 +26,16 @@ export const listBills = () => listRows('bills', [Query.orderDesc('date')]);
 export const listSplits = (billId) => listRows('splits', [Query.equal('billId', billId)]);
 export const listAllSplits = () => listRows('splits');
 export const listLoans = () => listRows('loans', [Query.orderDesc('date')]);
-export const listSettlements = () => listRows('settlements', [Query.orderDesc('date')]);
+export const listSettlements = (month) => {
+  const queries = [Query.orderDesc('date')];
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [year, monthNumber] = month.split('-').map(Number);
+    const nextMonth = new Date(Date.UTC(year, monthNumber, 1));
+    const endExclusive = `${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    queries.push(Query.greaterThanEqual('date', `${month}-01`), Query.lessThan('date', endExclusive));
+  }
+  return listRows('settlements', queries);
+};
 export const listTransfers = () => listRows('transfers', [Query.orderDesc('date')]);
 export const getRow = row;
 export const createRow = insert;

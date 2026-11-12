@@ -64,8 +64,8 @@ export async function removeLoan(req, res, next) {
   try { await FriendManagement.deleteLoan(req.params.id); res.json({ message: 'Loan deleted.' }); }
   catch (error) { next(error); }
 }
-export async function getSettlements(_req, res, next) {
-  try { res.json({ settlements: await FriendManagement.listSettlementsForApi() }); } catch (error) { next(error); }
+export async function getSettlements(req, res, next) {
+  try { res.json({ settlements: await FriendManagement.listSettlementsForApi(req.query.month) }); } catch (error) { next(error); }
 }
 export async function postSettlement(req, res, next) {
   const body = req.body || {};
